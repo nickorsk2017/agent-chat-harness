@@ -97,6 +97,21 @@ def main():
                 legal = ", ".join(sorted(TRANSITIONS.get(old_stage, set()))) or "(none: terminal)"
                 deny(f"illegal transition {old_stage} -> {new_stage}. "
                      f"Legal from {old_stage}: {legal}.")
+        # entering VALIDATED/DONE requires a matching VALIDATION.md (anti-forgery)
+        if new_stage in ("VALIDATED", "DONE"):
+            new_status = field(new_text, "status")
+            new_valv   = field(new_text, "validation_version")
+            vp = os.path.join(task_dir, "VALIDATION.md")
+            if not os.path.isfile(vp):
+                deny(f"cannot enter {new_stage}: VALIDATION.md is missing.")
+            vt = open(vp, encoding="utf-8").read()
+            vres, vver = field(vt, "result"), field(vt, "validation_version")
+            if new_valv and vver and new_valv != vver:
+                deny(f"validation_version mismatch: STATE={new_valv} VALIDATION.md={vver}.")
+            if new_status and vres and new_status != vres:
+                deny(f"status={new_status} contradicts VALIDATION.md result={vres}.")
+            if new_stage == "DONE" and vres != "PASS":
+                deny(f"cannot enter DONE: VALIDATION.md result={vres} (need PASS).")
 
     sys.exit(0)
 
