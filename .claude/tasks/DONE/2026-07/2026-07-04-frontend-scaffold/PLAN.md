@@ -1,4 +1,4 @@
-# PLAN — frontend-scaffold
+# PLAN — 2026-07-04-frontend-scaffold
 
 plan_version: 1
 

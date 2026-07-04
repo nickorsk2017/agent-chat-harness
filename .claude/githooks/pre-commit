@@ -31,7 +31,7 @@ def main():
     if not tid:
         sys.exit(0)  # no active task -> nothing to guard
     import glob
-    hits = glob.glob(os.path.join(ROOT, ".claude", "tasks", "*", tid, "STATE.yaml"))
+    hits = glob.glob(os.path.join(ROOT, ".claude", "tasks", "CURRENT", tid, "STATE.yaml"))
     if not hits:
         sys.exit(0)  # active id not among open tasks (already archived) -> nothing to guard
     sp = hits[0]

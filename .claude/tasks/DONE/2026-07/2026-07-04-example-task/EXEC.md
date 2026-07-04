@@ -1,4 +1,4 @@
-# EXEC — example-task
+# EXEC — 2026-07-04-example-task
 exec_version: 1
 author: Executor
 plan_ref: 1

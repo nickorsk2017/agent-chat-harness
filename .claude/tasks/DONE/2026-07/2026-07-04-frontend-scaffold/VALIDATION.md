@@ -1,4 +1,4 @@
-# VALIDATION — frontend-scaffold
+# VALIDATION — 2026-07-04-frontend-scaffold
 
 validation_version: 1
 result: PASS

@@ -1,4 +1,4 @@
-# PLAN — example-task
+# PLAN — 2026-07-04-example-task
 plan_version: 1
 author: Planner
 complexity: MEDIUM

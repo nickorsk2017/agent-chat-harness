@@ -1,4 +1,4 @@
-# LOG — example-task
+# LOG — 2026-07-04-example-task
 - t0 Engineer  INIT      TASK.md created, complexity=MEDIUM
 - t1 Planner   PLANNED   PLAN.md v1
 - t2 Executor  EXECUTED  EXEC.md v1 (plan_ref 1)

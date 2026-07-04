@@ -1,4 +1,4 @@
-task_id: example-task
+task_id: 2026-07-04-example-task
 stage: DONE            # INIT|PLANNED|APPROVED|EXECUTED|VALIDATED|DONE|ESCALATED
 status: PASS           # PENDING|PASS|FAIL
 iteration: 0           # FAIL re-routes so far; escalate when >= max_iterations

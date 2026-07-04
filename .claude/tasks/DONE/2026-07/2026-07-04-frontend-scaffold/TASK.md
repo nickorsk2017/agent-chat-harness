@@ -1,4 +1,4 @@
-# TASK — frontend-scaffold
+# TASK — 2026-07-04-frontend-scaffold
 owner: Engineer
 immutable: true
 

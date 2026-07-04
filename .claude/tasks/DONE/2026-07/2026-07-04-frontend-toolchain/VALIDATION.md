@@ -1,4 +1,4 @@
-# VALIDATION — frontend-toolchain
+# VALIDATION — 2026-07-04-frontend-toolchain
 
 validation_version: 1
 result: PASS

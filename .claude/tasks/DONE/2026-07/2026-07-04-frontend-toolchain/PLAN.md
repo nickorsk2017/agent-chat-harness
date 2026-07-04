@@ -1,4 +1,4 @@
-# PLAN — frontend-toolchain
+# PLAN — 2026-07-04-frontend-toolchain
 
 plan_version: 1
 

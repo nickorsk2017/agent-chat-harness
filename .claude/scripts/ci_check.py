@@ -18,7 +18,7 @@ import os, sys, glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)          # .claude/ (scripts/ lives under it)
-TASKS = os.path.join(ROOT, "tasks")
+CURRENT = os.path.join(ROOT, "tasks", "CURRENT")   # open working set
 STAGES = {"INIT","PLANNED","APPROVED","EXECUTED","VALIDATED","DONE","ESCALATED"}
 STATUSES = {"PENDING","PASS","FAIL"}
 
@@ -31,10 +31,9 @@ def field(text, key):
 
 def main():
     viol = []
-    # open tasks only: tasks/<YYYY-MM>/<id>/STATE.yaml
-    # (archive tasks/DONE/** is clean by construction and excluded)
-    states = [sp for sp in sorted(glob.glob(os.path.join(TASKS, "*", "*", "STATE.yaml")))
-              if os.sep + "DONE" + os.sep not in sp]
+    # open tasks only: tasks/CURRENT/<YYYY-MM-DD>-<task>/STATE.yaml
+    # (archive tasks/DONE/** is clean by construction and not scanned)
+    states = sorted(glob.glob(os.path.join(CURRENT, "*", "STATE.yaml")))
     def as_int(x):
         try: return int(x)
         except (TypeError, ValueError): return None

@@ -1,4 +1,4 @@
-# VALIDATION — example-task
+# VALIDATION — 2026-07-04-example-task
 validation_version: 1
 author: Validator
 exec_ref: 1

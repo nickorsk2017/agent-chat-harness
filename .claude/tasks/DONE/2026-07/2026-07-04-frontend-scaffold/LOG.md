@@ -1,4 +1,4 @@
-# LOG — frontend-scaffold
+# LOG — 2026-07-04-frontend-scaffold
 - 2026-07-04T17:40 Engineer INIT created, complexity=MEDIUM, next_actor=Planner
 - 2026-07-04T17:41 Engineer authored TASK.md requirements R1-R3; dispatch Planner
 - 2026-07-04T17:41 Planner PLANNED plan_version=1; next_actor=Executor
