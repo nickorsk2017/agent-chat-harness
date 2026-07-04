@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import Home from "@/app/page";
 
-describe("Hello World page", () => {
-  it("renders the Hello World heading", () => {
+describe("Welcome page", () => {
+  it("renders the Welcome heading", () => {
     render(<Home />);
     expect(
-      screen.getByRole("heading", { name: /hello world/i })
+      screen.getByRole("heading", { name: /welcome/i })
     ).toBeInTheDocument();
   });
 });
