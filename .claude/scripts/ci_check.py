@@ -26,8 +26,10 @@ def field(text, key):
 
 def main():
     viol = []
-    # open tasks only: tasks/<YYYY-MM>/<id>/STATE.yaml (archive DONE/ is clean by construction)
-    states = sorted(glob.glob(os.path.join(TASKS, "*", "*", "STATE.yaml")))
+    # open tasks only: tasks/<YYYY-MM>/<id>/STATE.yaml
+    # (archive tasks/DONE/** is clean by construction and excluded)
+    states = [sp for sp in sorted(glob.glob(os.path.join(TASKS, "*", "*", "STATE.yaml")))
+              if os.sep + "DONE" + os.sep not in sp]
     for sp in states:
         tid = os.path.basename(os.path.dirname(sp))
         s = open(sp, encoding="utf-8").read()

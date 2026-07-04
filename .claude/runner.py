@@ -2,8 +2,8 @@
 """Harness runner — deterministic task registry + dispatcher.
 
 Layout:
-  tasks/<YYYY-MM>/<id>/   open tasks (INIT..VALIDATED, ESCALATED) — scanned by CI
-  DONE/<YYYY-MM>/<id>/    closed tasks (DONE/PASS) — archive, safe to prune by month
+  tasks/<YYYY-MM>/<id>/       open tasks (INIT..VALIDATED, ESCALATED) — scanned by CI
+  tasks/DONE/<YYYY-MM>/<id>/  closed tasks (DONE/PASS) — archive, prune by month
   tasks/ACTIVE            bare id of the active task
 
 Commands:
@@ -13,7 +13,7 @@ Commands:
   active                                   print active task id
   status [id]                              key STATE fields (active if omitted)
   next [id]                                dispatch descriptor for next_actor
-  done [id] [--force]                      close: move tasks/.. -> DONE/.., clear active
+  done [id] [--force]                      close: move -> tasks/DONE/.., clear active
   install-hooks                            set core.hooksPath -> .claude/githooks
 
 The runner never decides content — only routing, from STATE.yaml (single truth).
@@ -22,7 +22,7 @@ import argparse, os, sys, datetime, glob, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TASKS = os.path.join(ROOT, "tasks")   # open
-DONE  = os.path.join(ROOT, "DONE")    # archive
+DONE  = os.path.join(ROOT, "tasks", "DONE")   # archive (under tasks/)
 ACTIVE = os.path.join(TASKS, "ACTIVE")
 
 ROLE_IO = {
@@ -36,12 +36,19 @@ FIRST_ACTOR = {"LOW": "Executor", "MEDIUM": "Planner", "HIGH": "Planner"}
 def die(m): print(f"error: {m}", file=sys.stderr); sys.exit(1)
 def month_now(): return datetime.datetime.now().strftime("%Y-%m")
 
+def _open_months():
+    return [m for m in sorted(glob.glob(os.path.join(TASKS, "*")))
+            if os.path.isdir(m) and os.path.basename(m) != "DONE"]
+
 def _find(tid):
-    """Return the task dir for <tid> under tasks/ or DONE/, else None."""
-    for base in (TASKS, DONE):
-        for d in sorted(glob.glob(os.path.join(base, "*", tid))):
-            if os.path.isfile(os.path.join(d, "STATE.yaml")):
-                return d
+    """Return the task dir for <tid> under tasks/<month>/ or tasks/DONE/<month>/."""
+    for m in _open_months():
+        d = os.path.join(m, tid)
+        if os.path.isfile(os.path.join(d, "STATE.yaml")):
+            return d
+    for d in sorted(glob.glob(os.path.join(DONE, "*", tid))):
+        if os.path.isfile(os.path.join(d, "STATE.yaml")):
+            return d
     return None
 
 def tdir(tid):
@@ -62,10 +69,13 @@ def read_state(tid): return open(spath(tid), encoding="utf-8").read()
 
 def all_tasks():
     out = []
-    for base, closed in ((TASKS, False), (DONE, True)):
-        for sp in glob.glob(os.path.join(base, "*", "*", "STATE.yaml")):
+    for m in _open_months():
+        for sp in glob.glob(os.path.join(m, "*", "STATE.yaml")):
             d = os.path.dirname(sp)
-            out.append((os.path.basename(d), d, os.path.basename(os.path.dirname(d)), closed))
+            out.append((os.path.basename(d), d, os.path.basename(m), False))
+    for sp in glob.glob(os.path.join(DONE, "*", "*", "STATE.yaml")):
+        d = os.path.dirname(sp)
+        out.append((os.path.basename(d), d, os.path.basename(os.path.dirname(d)), True))
     return sorted(out, key=lambda x: (x[3], x[2], x[0]))
 
 def get_active():
@@ -112,12 +122,12 @@ def cmd_list(a):
     if getattr(a, "done", False):  rows = [r for r in rows if r[3]]
     elif not getattr(a, "all", False): rows = [r for r in rows if not r[3]]
     if not rows: print("(no tasks)"); return
-    print(f"{'':2}{'TASK':22}{'WHERE':16}{'STAGE':11}{'STATUS':8}NEXT_ACTOR")
+    print(f"{'':2}{'TASK':22}{'WHERE':20}{'STAGE':11}{'STATUS':8}NEXT_ACTOR")
     for tid, d, mth, closed in rows:
         s = open(os.path.join(d,"STATE.yaml"), encoding="utf-8").read()
         mark = "*" if tid == act else " "
-        where = ("DONE/" if closed else "tasks/") + mth
-        print(f"{mark:2}{tid:22}{where:16}{field(s,'stage') or '?':11}"
+        where = ("tasks/DONE/" if closed else "tasks/") + mth
+        print(f"{mark:2}{tid:22}{where:20}{field(s,'stage') or '?':11}"
               f"{field(s,'status') or '?':8}{field(s,'next_actor') or '?'}")
 
 def cmd_use(a):
@@ -157,12 +167,12 @@ def cmd_done(a):
     if not clean:
         print(f"warning: forcing close of unfinished task (stage={stage} status={status})")
     src = tdir(tid); m = os.path.basename(os.path.dirname(src))
-    log(tid, f"Engineer CLOSED done={clean}; archived to DONE/{m}")
-    if src.startswith(TASKS):  # move open -> archive
+    log(tid, f"Engineer CLOSED done={clean}; archived to tasks/DONE/{m}")
+    if not os.path.abspath(src).startswith(os.path.abspath(DONE)):  # open -> archive
         dst = os.path.join(DONE, m); os.makedirs(dst, exist_ok=True)
         shutil.move(src, os.path.join(dst, tid))
     if get_active() == tid or a.id is None: set_active("")
-    print(f"✔ task '{tid}' closed -> DONE/{m}/{tid}. active task -> none.")
+    print(f"✔ task '{tid}' closed -> tasks/DONE/{m}/{tid}. active task -> none.")
     print("  all state is in artifacts — the Claude window is safe to clear "
           "now (/clear or start a new session).")
 

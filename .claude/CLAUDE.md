@@ -32,9 +32,9 @@ STATE.yaml. The Engineer may switch freely without losing any task's state.
 ## Task Layout & Retention
 Tasks are date-partitioned by creation month:
 - `tasks/<YYYY-MM>/<id>/`  open work (INIT..VALIDATED, ESCALATED) — the hot set CI scans.
-- `DONE/<YYYY-MM>/<id>/`   closed work (DONE/PASS) — archive; `runner.py done` moves it here.
+- `tasks/DONE/<YYYY-MM>/<id>/`  closed work (DONE/PASS) — archive; `runner.py done` moves it here.
 The hot set stays small regardless of history size. The archive is immutable and can be
-pruned a whole month at a time (`rm -rf DONE/2025-01`) once its audit value has expired.
+pruned a whole month at a time (`rm -rf tasks/DONE/2025-01`) once its audit value has expired.
 `ci_check.py` scans only `tasks/` (live); the archive is clean by construction.
 
 ## Commit Gate & Task Closure
