@@ -1,0 +1,30 @@
+[project]
+name = "doc-analyzer"
+version = "0.1.0"
+description = "doc_analyzer MCP server — document analysis (PDF extract, summarize, Q&A)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "agent-core>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.5.0"]
+
+[project.scripts]
+doc-analyzer = "doc_analyzer.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Flat layout: this pyproject.toml lives inside the package dir (mcp/doc_analyzer/),
+# so map the directory contents to the "doc_analyzer" import package in the wheel.
+[tool.hatch.build.targets.wheel]
+only-include = ["."]
+sources = { "." = "doc_analyzer" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

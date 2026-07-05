@@ -1,0 +1,30 @@
+[project]
+name = "image-analyzer"
+version = "0.1.0"
+description = "image_analyzer MCP server — image analysis (describe, detect, OCR)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "agent-core>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.5.0"]
+
+[project.scripts]
+image-analyzer = "image_analyzer.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Flat layout: this pyproject.toml lives inside the package dir (mcp/image_analyzer/),
+# so map the directory contents to the "image_analyzer" import package in the wheel.
+[tool.hatch.build.targets.wheel]
+only-include = ["."]
+sources = { "." = "image_analyzer" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,0 +1,33 @@
+[project]
+name = "master-orchestrator"
+version = "0.1.0"
+description = "master_orchestrator MCP server — plans, fans out to sub-agent MCP servers, merges results"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.0.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langgraph>=0.2.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "agent-core>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.5.0"]
+
+[project.scripts]
+master-orchestrator = "master_orchestrator.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Flat layout: this pyproject.toml lives inside the package dir (mcp/master_orchestrator/),
+# so map the directory contents to the "master_orchestrator" import package in the wheel.
+[tool.hatch.build.targets.wheel]
+only-include = ["."]
+sources = { "." = "master_orchestrator" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

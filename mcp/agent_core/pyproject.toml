@@ -1,0 +1,19 @@
+[project]
+name = "agent-core"
+version = "0.1.0"
+description = "Shared MCP response envelope + LangChain chat-model factory for the agent fleet"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "langchain-core>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Flat layout: this pyproject.toml lives inside the package dir (mcp/agent_core/),
+# so map the directory contents to the "agent_core" import package in the wheel.
+[tool.hatch.build.targets.wheel]
+only-include = ["."]
+sources = { "." = "agent_core" }

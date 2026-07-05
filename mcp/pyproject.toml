@@ -1,0 +1,33 @@
+# Dev aggregator ONLY. Each agent is an independent distribution in its own top-level
+# folder under mcp/ (folder name == import root); this file does NOT build a shared
+# package. It exists so a developer can install the whole fleet editable in one step for
+# local work. Install order matters: agent_core first.
+#
+#   pip install -e agent_core
+#   pip install -e web_agent -e doc_analyzer \
+#                -e image_analyzer -e master_orchestrator
+#
+# In CI/prod, install only the package(s) you deploy.
+
+[project]
+name = "mcp-agents-dev"
+version = "0.1.0"
+description = "Dev meta-package: editable-installs the independent agent distributions in mcp/<name>"
+requires-python = ">=3.11"
+dependencies = [
+    "agent-core",
+    "web-agent",
+    "doc-analyzer",
+    "image-analyzer",
+    "master-orchestrator",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "ruff>=0.5.0"]
+
+[tool.uv.sources]
+agent-core          = { path = "agent_core", editable = true }
+web-agent           = { path = "web_agent", editable = true }
+doc-analyzer        = { path = "doc_analyzer", editable = true }
+image-analyzer      = { path = "image_analyzer", editable = true }
+master-orchestrator = { path = "master_orchestrator", editable = true }
