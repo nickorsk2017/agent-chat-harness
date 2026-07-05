@@ -1,0 +1,51 @@
+# agent-chat — full stack: frontend + backend gateway + mcp orchestrator.
+# Start everything with:  make up   (or: docker compose up -d --build)
+name: agent-chat
+
+services:
+  mcp:
+    build:
+      context: ./mcp
+    image: agent-chat/mcp
+    ports:
+      - "${MCP_PORT:-8100}:8100"
+    environment:
+      # Sub-agents are spawned in-process over stdio by the orchestrator.
+      ORCHESTRATOR_LLM_PROVIDER: "${ORCHESTRATOR_LLM_PROVIDER:-mock}"
+    networks: [agentnet]
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    image: agent-chat/backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      GATEWAY_HOST: "0.0.0.0"
+      GATEWAY_PORT: "8000"
+      GATEWAY_CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+      # "mock" (default) runs standalone; set "http" to route through the mcp service.
+      GATEWAY_ORCHESTRATOR_MODE: "${GATEWAY_ORCHESTRATOR_MODE:-mock}"
+      GATEWAY_ORCHESTRATOR_MCP_URL: "http://mcp:8100/mcp"
+    depends_on: [mcp]
+    networks: [agentnet]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: agent-chat/frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: "production"
+      # Backend is reached from the user's browser on the host, hence localhost.
+      NEXT_PUBLIC_API_BASE_URL: "${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}"
+    depends_on: [backend]
+    networks: [agentnet]
+    restart: unless-stopped
+
+networks:
+  agentnet:
+    driver: bridge
