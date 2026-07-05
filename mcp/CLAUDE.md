@@ -1,6 +1,6 @@
 # MCP Agents — Project Rules
 
-Multi-agent system built on **FastMCP**, **LangChain**, **LangGraph**, and **Pydantic** (all latest versions).
+Multi-agent system built on **FastMCP**, **LangChain**, **LangGraph**, **LangSmith** (tracing), and **Pydantic** (all latest versions).
 Each agent is an independent MCP server. A `master_orchestrator` fans a user prompt out to
 specialized sub-agents **in parallel**, then merges their results into one answer.
 

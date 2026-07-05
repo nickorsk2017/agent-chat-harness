@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 # Copy the whole backend context (packages declared in pyproject:
-#   packages = ["_common", "gateway-microservice/gateway"]) and install it.
+#   packages = ["_common", "gateway"]) and install it.
 COPY . .
 RUN pip install --upgrade pip && pip install ".[sqlite]"
 

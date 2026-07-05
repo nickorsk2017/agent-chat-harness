@@ -13,17 +13,15 @@ backend/
 │   ├── db/                     # DeclarativeBase + async session factory
 │   ├── schemas/                # Shared Pydantic schemas (ApiResponse envelope)
 │   └── env/                    # Environment variable definitions (pydantic-settings)
-└── {name}-microservice/        # One folder per bounded context
-    └── {name}/                 # Importable package (dir names can't be Python modules)
-        ├── routers/            # FastAPI route handlers (thin)
-        ├── services/           # Business logic
-        ├── models/             # SQLAlchemy ORM models
-        ├── schemas/            # Pydantic request/response schemas
-        └── main.py             # FastAPI app factory + Uvicorn entry
+└── {name}/                     # One importable package per bounded context
+    ├── routers/                # FastAPI route handlers (thin)
+    ├── services/               # Business logic
+    ├── models/                 # SQLAlchemy ORM models
+    ├── schemas/                # Pydantic request/response schemas
+    └── main.py                 # FastAPI app factory + Uvicorn entry
 ```
-The microservice directory keeps the mandated hyphenated name; its importable code lives
-in a nested underscore package (e.g. `gateway-microservice/gateway/`) because Python
-module names can't contain hyphens.
+Each bounded context is a top-level importable package under `backend/` (e.g. `gateway/`),
+so `gateway.main:app` resolves directly with no nested wrapper directory.
 
 ## Layers (respect boundaries)
 - `routers/` — HTTP only. Validate input, call a service, return an `ApiResponse`
@@ -45,9 +43,11 @@ module names can't contain hyphens.
    `_common/env` (env-backed). No hardcoded secrets.
 5. **Fail soft.** No exception crosses the HTTP boundary as an unstructured 500 — wrap it
    in `ApiResponse.fail(...)` at HTTP 200.
-6. **Mock by default.** External integrations (the orchestrator MCP client) sit behind an
-   interface with a mock implementation selected by config, so the backend runs with zero
-   external processes. Swap to real via `GATEWAY_ORCHESTRATOR_MODE=http`.
+6. **Real by default, mock on demand.** The orchestrator MCP client sits behind an
+   interface selected by config. Default `GATEWAY_ORCHESTRATOR_MODE=stdio` spawns the
+   real `master_orchestrator` MCP server as a subprocess; `http` connects to a running
+   one over HTTP; `mock` is the in-process stub for offline / tests (zero external
+   processes). Spawn command/args are config (rule 4), never hardcoded.
 7. **MCP boundary.** The gateway is an MCP *client* of `master_orchestrator`; it calls the
    `orchestrate` tool and maps the returned envelope. It never imports `mcp/` packages.
 
@@ -60,6 +60,9 @@ module names can't contain hyphens.
 ```
 cd backend
 pip install -e .[dev]
-GATEWAY_ORCHESTRATOR_MODE=mock uvicorn gateway.main:app --app-dir gateway-microservice
+# Real path (default): spawns master_orchestrator over stdio — it must be importable
+# in this env (pip install -e ../mcp/master_orchestrator).
+uvicorn gateway.main:app
+# Offline path (no orchestrator process): GATEWAY_ORCHESTRATOR_MODE=mock uvicorn gateway.main:app
 # POST http://localhost:8000/api/chat  {"prompt":"hello"}
 ```

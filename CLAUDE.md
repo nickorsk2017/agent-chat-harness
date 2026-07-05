@@ -23,6 +23,15 @@ Every change — code, config, docs, scaffolding, "quick fixes", anything — is
 Chat is ephemeral transport only. The sources of truth are the task artifacts
 (`TASK.md`, `PLAN.md`, `EXEC.md`, `VALIDATION.md`, `STATE.yaml`) — never chat history.
 
+## Reasoning belongs to the Planner
+All reasoning, analysis, and design decisions are the **Planner's** job and live in
+`PLAN.md`. Actors MUST NOT improvise analysis in chat or in non-Planner artifacts.
+Chat is transport, not a place to think; the Executor implements the plan and the
+Validator checks it — neither invents design. If a change needs new reasoning that the
+current plan does not cover, route it back through the Planner (bump `plan_version`)
+rather than deciding ad hoc. Reasoning not grounded in `PLAN.md` (or the other task
+artifacts) is invalid.
+
 ## No exceptions — explicit prohibition
 There are **NO exceptions** to the harness. Specifically, you MUST NOT:
 - Edit, create, or delete any file outside an active harness task and its Read/Write Matrix.
@@ -35,6 +44,8 @@ There are **NO exceptions** to the harness. Specifically, you MUST NOT:
 - Write outside your role's column in the Read/Write Matrix, or perform an illegal
   `STATE.yaml` stage transition.
 - Use chat context as memory, or act on reasoning not grounded in the task artifacts.
+- Perform analysis, design, or decision-making outside the Planner stage — no ad-hoc
+  reasoning in chat or in non-Planner artifacts; route new reasoning through the Planner.
 
 If a request seems to require an exception, it does not: open (or reroute) a task and
 follow the harness. If the harness genuinely cannot express the work, **halt and escalate

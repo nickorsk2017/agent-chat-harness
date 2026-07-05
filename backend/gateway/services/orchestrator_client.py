@@ -5,9 +5,11 @@ The gateway is an MCP *client* of the orchestrator's MCP server. It invokes the
 orchestrator's ``AgentResponse[OrchestrationResult]`` envelope, extracting the
 merged ``answer``.
 
-Two implementations behind one Protocol, selected by config:
-- ``HttpMcpOrchestratorClient`` — real MCP-over-HTTP (fastmcp Client on a URL).
-- ``MockOrchestratorClient``     — in-process stub; zero external processes (default).
+Three implementations behind one Protocol, selected by config:
+- ``StdioMcpOrchestratorClient`` — real MCP-over-stdio; spawns the orchestrator as a
+  subprocess (fastmcp Client on a ``{command, args}`` spec). This is the default.
+- ``HttpMcpOrchestratorClient``  — real MCP-over-HTTP (fastmcp Client on a URL).
+- ``MockOrchestratorClient``     — in-process stub; zero external processes (tests).
 
 The client never raises across its boundary: failures are returned as an
 ``OrchestrationOutcome`` with ``ok=False`` so the service layer can map them into
@@ -68,6 +70,63 @@ def _parse_envelope(payload: Any) -> OrchestrationOutcome:
     return OrchestrationOutcome(ok=True, answer=answer, subtasks=subtasks)
 
 
+async def _run_orchestration(
+    spec: Any, tool: str, timeout: float, prompt: str, context: dict[str, str] | None
+) -> OrchestrationOutcome:
+    """Invoke the orchestrator ``tool`` via a FastMCP ``Client(spec)``.
+
+    ``spec`` is whatever FastMCP's ``Client`` accepts as a server: a URL string
+    (HTTP) or a ``{"command", "args"}`` dict (stdio subprocess). Shared by both
+    real transports so the call/parse/fail-soft body lives in exactly one place.
+    Never raises across the boundary — every failure becomes ``ok=False``.
+    """
+    # Imported lazily so the package imports even if fastmcp isn't installed
+    # (e.g. when running purely in mock mode).
+    try:
+        import asyncio
+
+        from fastmcp import Client
+    except ImportError as exc:  # pragma: no cover - env issue
+        return OrchestrationOutcome(ok=False, error=f"fastmcp not available: {exc}")
+
+    request = {"prompt": prompt, "context": context or {}}
+    try:
+        async with asyncio.timeout(timeout):
+            async with Client(spec) as client:
+                result = await client.call_tool(tool, {"request": request})
+        return _parse_envelope(_extract(result))
+    except TimeoutError:
+        return OrchestrationOutcome(ok=False, error="orchestrator timed out")
+    except Exception as exc:  # noqa: BLE001 - fail soft across the boundary
+        return OrchestrationOutcome(ok=False, error=str(exc))
+
+
+class StdioMcpOrchestratorClient:
+    """Real client: spawns the orchestrator's MCP server over stdio.
+
+    Mirrors how the orchestrator itself reaches its sub-agents
+    (``mcp/master_orchestrator/tools/subagent_client.py``): hand FastMCP a
+    ``{command, args}`` spec and it launches the module as a subprocess. The
+    gateway never imports any ``mcp/`` package — it only spawns the configured
+    command (backend/CLAUDE.md rule 7).
+    """
+
+    def __init__(self, settings: Settings) -> None:
+        self._spec = {
+            "command": settings.orchestrator_command,
+            "args": settings.orchestrator_args,
+        }
+        self._tool = settings.orchestrator_tool
+        self._timeout = settings.orchestrator_timeout_s
+
+    async def orchestrate(
+        self, prompt: str, context: dict[str, str] | None = None
+    ) -> OrchestrationOutcome:
+        return await _run_orchestration(
+            self._spec, self._tool, self._timeout, prompt, context
+        )
+
+
 class HttpMcpOrchestratorClient:
     """Real client: connects to the orchestrator's MCP server over HTTP."""
 
@@ -79,27 +138,9 @@ class HttpMcpOrchestratorClient:
     async def orchestrate(
         self, prompt: str, context: dict[str, str] | None = None
     ) -> OrchestrationOutcome:
-        # Imported lazily so the package imports even if fastmcp isn't installed
-        # (e.g. when running purely in mock mode).
-        try:
-            import asyncio
-
-            from fastmcp import Client
-        except ImportError as exc:  # pragma: no cover - env issue
-            return OrchestrationOutcome(
-                ok=False, error=f"fastmcp not available: {exc}"
-            )
-
-        request = {"prompt": prompt, "context": context or {}}
-        try:
-            async with asyncio.timeout(self._timeout):
-                async with Client(self._url) as client:
-                    result = await client.call_tool(self._tool, {"request": request})
-            return _parse_envelope(_extract(result))
-        except TimeoutError:
-            return OrchestrationOutcome(ok=False, error="orchestrator timed out")
-        except Exception as exc:  # noqa: BLE001 - fail soft across the boundary
-            return OrchestrationOutcome(ok=False, error=str(exc))
+        return await _run_orchestration(
+            self._url, self._tool, self._timeout, prompt, context
+        )
 
 
 def _extract(result: Any) -> Any:
@@ -136,6 +177,8 @@ class MockOrchestratorClient:
 
 def build_orchestrator_client(settings: Settings) -> OrchestratorClient:
     """Factory: pick the client implementation from settings.orchestrator_mode."""
+    if settings.orchestrator_mode == "stdio":
+        return StdioMcpOrchestratorClient(settings)
     if settings.orchestrator_mode == "http":
         return HttpMcpOrchestratorClient(settings)
     return MockOrchestratorClient()

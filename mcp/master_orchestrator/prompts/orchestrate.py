@@ -10,8 +10,18 @@ PLANNER_SYSTEM = (
     "not depend on each other."
 )
 
+PLANNER_HUMAN = (
+    "User prompt:\n{prompt}\n\n"
+    "Context hints (may be empty):\n{context}"
+)
+
 SYNTHESIS_SYSTEM = (
     "You merge the results of several sub-agents into a single, coherent answer "
     "to the user's original prompt. Be concise. If a sub-agent failed, note it "
     "briefly and answer with what succeeded."
+)
+
+SYNTHESIS_HUMAN = (
+    "Original prompt:\n{prompt}\n\n"
+    "Sub-task results (JSON, one entry per sub-agent call):\n{results}"
 )

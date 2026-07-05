@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-OrchestratorMode = Literal["mock", "http"]
+OrchestratorMode = Literal["mock", "http", "stdio"]
 
 
 class Settings(BaseSettings):
@@ -32,10 +32,22 @@ class Settings(BaseSettings):
     )
 
     # --- Orchestrator MCP integration ---
-    # "mock" -> in-process stub (default, zero external processes).
-    # "http" -> connect to the running master_orchestrator MCP server over HTTP.
-    orchestrator_mode: OrchestratorMode = "mock"
+    # The gateway is an MCP *client* of master_orchestrator. Mode selects transport:
+    # "stdio" -> spawn the orchestrator MCP server as a subprocess (default, real).
+    # "http"  -> connect to an already-running orchestrator MCP server over HTTP.
+    # "mock"  -> in-process stub (offline / tests, zero external processes).
+    orchestrator_mode: OrchestratorMode = "stdio"
+
+    # stdio transport: how to spawn the orchestrator (config, not constants).
+    orchestrator_command: str = "python"
+    orchestrator_args: list[str] = Field(
+        default_factory=lambda: ["-m", "master_orchestrator.main"]
+    )
+
+    # http transport: URL of the running orchestrator MCP server.
     orchestrator_mcp_url: str = "http://127.0.0.1:8100/mcp"
+
+    # shared: tool name to invoke and the per-request hard timeout.
     orchestrator_tool: str = "orchestrate"
     orchestrator_timeout_s: float = 30.0
 

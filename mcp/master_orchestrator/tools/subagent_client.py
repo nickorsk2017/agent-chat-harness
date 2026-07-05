@@ -1,67 +1,93 @@
-"""MCP clients for the sub-agents.
+"""Sub-agent calls as LangChain tool calls via ``langchain-mcp-adapters``.
 
-The orchestrator talks to each sub-agent as an MCP client using the FastMCP
-in-process/stdio ``Client``. Each ``call`` opens a session, invokes one tool,
-and returns the parsed envelope. Calls are independent, so the orchestrator can
-fire them concurrently with ``asyncio.gather`` (rule 6).
+A single lazily-built ``MultiServerMCPClient`` maps every configured
+``SubAgentEndpoint`` to a stdio/HTTP connection. Each dispatch resolves the
+sub-agent's tool, invokes it under our own timeout (the adapters expose no
+per-call timeout), and validates the output into a typed ``AgentResponse`` at
+this boundary (rule 7 / R8): failures never raise, they come back as an error
+envelope so one bad sub-agent can't sink the whole run (rule 6).
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
-from fastmcp import Client
+from langchain_core.tools import BaseTool
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from master_orchestrator.config import SubAgentEndpoint, settings
+from agent_core.envelope import AgentResponse
+from master_orchestrator.config import settings
+
+_client: MultiServerMCPClient | None = None
 
 
-def _client_for(endpoint: SubAgentEndpoint) -> Client:
-    """Build a FastMCP client for a sub-agent.
+def _get_client() -> MultiServerMCPClient:
+    """Build (once) the multi-server client from the sub-agent registry."""
+    global _client
+    if _client is None:
+        _client = MultiServerMCPClient(
+            {name: ep.to_connection() for name, ep in settings.subagents.items()},
+            # Failures must surface as exceptions we convert to error envelopes,
+            # not as success-shaped strings.
+            handle_tool_errors=False,
+        )
+    return _client
 
-    Local dev: spawn the sub-agent module over stdio.
-    Networked deploy: pass the endpoint URL instead.
-    """
-    if endpoint.url:
-        return Client(endpoint.url)
-    # FastMCP accepts a stdio server spec as {command, args}.
-    return Client({"command": endpoint.command, "args": endpoint.args})
+
+async def _resolve_tool(agent: str, tool: str) -> BaseTool | None:
+    """Look up ``tool`` on ``agent``'s server; ``None`` if it doesn't exist."""
+    tools = await _get_client().get_tools(server_name=agent)
+    for candidate in tools:
+        if candidate.name == tool:
+            return candidate
+    return None
+
+
+def _to_envelope(raw: Any, agent: str) -> AgentResponse[Any]:
+    """Validate adapter tool output (dict or JSON text) into ``AgentResponse``."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError:
+            return AgentResponse.fail(agent, f"unparseable sub-agent response: {raw!r}")
+    # Adapters may return (content, artifact) tuples for content_and_artifact tools.
+    if isinstance(raw, tuple) and raw:
+        raw = raw[0]
+    try:
+        return AgentResponse.model_validate(raw)
+    except Exception:  # noqa: BLE001 — malformed envelope is a sub-agent fault
+        return AgentResponse.fail(agent, f"sub-agent returned a non-envelope: {raw!r}")
 
 
 async def call_subagent(
     agent: str, tool: str, arguments: dict[str, Any]
-) -> dict[str, Any]:
-    """Invoke ``tool`` on ``agent`` and return its envelope as a dict.
+) -> AgentResponse[Any]:
+    """Invoke ``tool`` on ``agent`` and return its typed envelope.
 
-    Never raises across the boundary — failures come back as an error envelope
-    so one bad sub-agent can't sink the whole run.
+    Never raises across the boundary — timeouts, unknown agents/tools, and
+    transport errors all come back as error envelopes.
     """
-    endpoint = settings.subagents.get(agent)
-    if endpoint is None:
-        return {"status": "error", "agent": agent, "error": f"unknown agent {agent!r}"}
+    if agent not in settings.subagents:
+        return AgentResponse.fail(agent, f"unknown agent {agent!r}")
 
     try:
         async with asyncio.timeout(settings.subagent_timeout_s):
-            async with _client_for(endpoint) as client:
-                result = await client.call_tool(tool, {"request": arguments})
-        return _parse(result, agent)
+            lc_tool = await _resolve_tool(agent, tool)
+            if lc_tool is None:
+                return AgentResponse.fail(
+                    agent, f"unknown tool {tool!r} on agent {agent!r}"
+                )
+            # Sub-agent tools take a single `request` model param; pass the
+            # arguments through it (fall back to flat args if the adapter
+            # flattened the schema).
+            args = (
+                {"request": arguments} if "request" in (lc_tool.args or {}) else arguments
+            )
+            raw = await lc_tool.ainvoke(args)
+        return _to_envelope(raw, agent)
     except TimeoutError:
-        return {"status": "error", "agent": agent, "error": "sub-agent timed out"}
-    except Exception as exc:  # noqa: BLE001
-        return {"status": "error", "agent": agent, "error": str(exc)}
-
-
-def _parse(result: Any, agent: str) -> dict[str, Any]:
-    """Normalize FastMCP tool output into a plain dict envelope."""
-    data = getattr(result, "structured_content", None) or getattr(result, "data", None)
-    if isinstance(data, dict):
-        return data
-    if data is not None:
-        return {"status": "ok", "agent": agent, "data": data}
-    # Fall back to text content blocks.
-    content = getattr(result, "content", None)
-    text = None
-    if content:
-        first = content[0]
-        text = getattr(first, "text", None)
-    return {"status": "ok", "agent": agent, "data": text}
+        return AgentResponse.fail(agent, "sub-agent timed out")
+    except Exception as exc:  # noqa: BLE001 — rule 7: fail soft, never raise
+        return AgentResponse.fail(agent, str(exc))

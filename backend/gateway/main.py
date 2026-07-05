@@ -1,4 +1,4 @@
-"""FastAPI app factory + Uvicorn entry for the gateway-microservice."""
+"""FastAPI app factory + Uvicorn entry for the gateway service."""
 
 from __future__ import annotations
 

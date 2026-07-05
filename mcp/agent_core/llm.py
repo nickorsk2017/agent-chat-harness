@@ -16,14 +16,16 @@ def build_chat_model(
     model: str = "mock-model",
     api_key: str | None = None,
     temperature: float = 0.0,
+    mock_responses: list[str] | None = None,
 ) -> BaseChatModel:
     """Build a LangChain chat model.
 
     Swap this out for ``ChatOpenAI`` / ``ChatAnthropic`` etc. by setting
     ``provider`` and ``api_key`` in an agent's ``config.py``.
+    ``mock_responses`` seeds the fake model's canned replies (mock path only).
     """
     if provider == "mock" or not api_key:
-        return FakeListChatModel(responses=["[mock-llm] response"])
+        return FakeListChatModel(responses=mock_responses or ["[mock-llm] response"])
 
     if provider == "openai":  # pragma: no cover - requires extra + key
         from langchain_openai import ChatOpenAI

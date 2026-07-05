@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from master_orchestrator.db import history
 from master_orchestrator.schemas.http import OrchestrateRequest
 from master_orchestrator.schemas.plan import OrchestrationResult
 from master_orchestrator.tools.graph import run_orchestration
@@ -20,7 +19,6 @@ def register(mcp: FastMCP) -> None:
         parallel, and return one merged answer."""
         try:
             result = await run_orchestration(request)
-            history.record(result)
             return AgentResponse.ok(AGENT, result, subtasks=len(result.results))
         except Exception as exc:  # noqa: BLE001
             return AgentResponse.fail(AGENT, str(exc))

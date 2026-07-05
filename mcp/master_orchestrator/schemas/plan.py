@@ -22,6 +22,15 @@ class SubTask(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
 
 
+class Plan(BaseModel):
+    """Top-level planner output: the sub-tasks to dispatch in parallel.
+
+    Wrapper model because structured output needs a single top-level schema.
+    """
+
+    tasks: list[SubTask] = Field(default_factory=list)
+
+
 class SubTaskResult(BaseModel):
     task: SubTask
     ok: bool
