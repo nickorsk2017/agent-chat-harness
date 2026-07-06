@@ -86,8 +86,9 @@ master-orchestrator # or: python -m master_orchestrator.main
 ```
 
 Then call the `orchestrate` tool with `{ "request": { "prompt": "...", "context": { ... } } }`.
-Example contexts: `{"location": "Berlin"}`, `{"pdf_path": "/tmp/report.pdf"}`,
-`{"image_path": "/tmp/photo.jpg"}`.
+Example contexts: `{"location": "Berlin"}`, `{"document_name": "report.pdf",
+"document_text": "<extracted text>"}` (PDF text is extracted by the gateway —
+doc_analyzer never reads files), `{"image_path": "/tmp/photo.jpg"}`.
 
 ## Mocks vs. real providers
 

@@ -20,7 +20,13 @@ class ChatRequest(BaseModel):
     context: dict[str, str] = Field(
         default_factory=dict,
         description="Optional hints forwarded to the orchestrator "
-        "(e.g. {'pdf_path': ..., 'image_path': ...}).",
+        "(e.g. {'document_name': ..., 'document_text': ...} or {'image_path': ...}).",
+    )
+    thread_id: str | None = Field(
+        default=None,
+        description="Conversation thread key. Omit on the first message; the "
+        "gateway generates one and echoes it in the reply. Send it back on "
+        "follow-ups so the orchestrator keeps history and stored documents.",
     )
 
 
@@ -31,3 +37,15 @@ class ChatReply(BaseModel):
     subtasks: int = Field(
         default=0, description="How many sub-agent results were merged."
     )
+    thread_id: str = Field(
+        default="",
+        description="Thread key this turn was checkpointed under; clients send "
+        "it with the next message to continue the conversation.",
+    )
+
+
+class DeleteThreadReply(BaseModel):
+    """Successful payload of a thread deletion."""
+
+    thread_id: str = Field(..., description="The thread that was deleted.")
+    deleted: bool = Field(default=True, description="Always true on success.")

@@ -43,7 +43,8 @@ services:
       LANGSMITH_ENDPOINT: "${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}"
       LANGSMITH_PROJECT: "${LANGSMITH_PROJECT:-gemma-chat}"
     volumes:
-      # Chat attachments saved by the gateway; sub-agents read them by path.
+      # IMAGE attachments saved by the gateway; vision sub-agents read them by
+      # path. PDFs never touch disk — their text travels inside the request.
       - uploads:/data/uploads
     depends_on:
       postgres:
