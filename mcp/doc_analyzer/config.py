@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_core.llm import DEFAULT_NVIDIA_MODEL, NVIDIA_BASE_URL
+from agent_core.llm import DEFAULT_MODEL, NOVITA_BASE_URL
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,11 +15,11 @@ class DocAnalyzerSettings(BaseSettings):
     transport: str = "stdio"  # "stdio" | "sse" | "streamable-http"
 
     # Providers: "mock" ships by default; set real keys to go live.
-    # LLM: gemma via the NVIDIA OpenAI-compatible endpoint. GEMMA_API_KEY
+    # LLM: gemma via Novita's OpenAI-compatible endpoint. GEMMA_API_KEY
     # (env) is REQUIRED; there is no mock LLM fallback.
-    llm_provider: str = "nvidia"
-    llm_model: str = DEFAULT_NVIDIA_MODEL
-    llm_base_url: str = NVIDIA_BASE_URL
+    llm_provider: str = "novita"
+    llm_model: str = DEFAULT_MODEL
+    llm_base_url: str = NOVITA_BASE_URL
     llm_api_key: str | None = Field(default=None, validation_alias="GEMMA_API_KEY")
     request_timeout_s: float = 30.0
 

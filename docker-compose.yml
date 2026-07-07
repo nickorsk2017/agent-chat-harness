@@ -29,6 +29,8 @@ services:
     environment:
       # Single real-LLM key for all agents (no mock fallback) — fail early if unset.
       GEMMA_API_KEY: "${GEMMA_API_KEY:?GEMMA_API_KEY is required (see .env.example)}"
+      # Tavily key for web_agent live search (search_web / get_news).
+      TAVILY_API_KEY: "${TAVILY_API_KEY:-}"
       # Per-sub-agent budget (real gemma calls over full documents/images).
       ORCHESTRATOR_SUBAGENT_TIMEOUT_S: "${ORCHESTRATOR_SUBAGENT_TIMEOUT_S:-120}"
       # Per-attempt LLM HTTP timeout (agent_core.llm). Fail fast so one hung

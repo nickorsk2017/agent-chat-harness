@@ -3,6 +3,7 @@
 # Python
 __pycache__/
 *.py[cod]
+.venv-gemma/
 
 # Secrets — never commit real keys
 .env

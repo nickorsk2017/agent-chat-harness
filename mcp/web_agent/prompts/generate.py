@@ -1,4 +1,4 @@
-"""Generation prompts for web_agent's LLM-backed providers (gemma via NVIDIA).
+"""Generation prompts for web_agent's LLM-backed providers (gemma via Novita).
 
 The model cannot browse; each prompt asks for a best-effort answer from its own
 knowledge and to flag uncertainty inside the text fields.

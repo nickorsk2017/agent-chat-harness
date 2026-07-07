@@ -28,3 +28,14 @@ class WebPage(BaseModel):
     url: str
     title: str
     text: str
+
+
+class SearchItem(BaseModel):
+    title: str
+    url: str
+    content: str
+
+
+class SearchResult(BaseModel):
+    query: str
+    results: list[SearchItem] = Field(default_factory=list)

@@ -1,8 +1,9 @@
-"""LangChain chat-model factory shared by all agents.
+"""Single shared LangChain chat model for the whole application.
 
-Every agent talks to a real model — ``google/gemma-4-31b-it`` served by the
-NVIDIA OpenAI-compatible endpoint by default. There is NO mock fallback: a
-missing ``GEMMA_API_KEY`` raises ``LLMConfigError`` at model-build time.
+Every agent talks to ONE provider: Novita's OpenAI-compatible endpoint
+(``https://api.novita.ai/openai``), authenticated with ``GEMMA_API_KEY``. The app
+consumes it as a LangChain ``BaseChatModel`` (``ChatOpenAI`` pointed at Novita).
+No mock fallback: a missing key raises ``LLMConfigError`` at model-build time.
 """
 
 from __future__ import annotations
@@ -10,9 +11,13 @@ from __future__ import annotations
 import os
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI
 
-NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
-DEFAULT_NVIDIA_MODEL = "google/gemma-4-31b-it"
+NOVITA_BASE_URL = "https://api.novita.ai/openai"
+DEFAULT_MODEL = os.environ.get("GEMMA_MODEL", "google/gemma-4-31b-it")
+
+# One temperature for the whole app.
+DEFAULT_TEMPERATURE = 0.5
 
 # Per-request hard timeout for LLM HTTP calls. Without it the OpenAI SDK waits
 # up to 600s and retries with backoff — a hanging endpoint then silently eats
@@ -25,61 +30,49 @@ def _request_timeout() -> float:
 
 
 class LLMConfigError(RuntimeError):
-    """The LLM is misconfigured (missing key / removed provider)."""
+    """The LLM is misconfigured (missing GEMMA_API_KEY)."""
+
+
+_shared_model: BaseChatModel | None = None
 
 
 def build_chat_model(
     *,
-    provider: str = "nvidia",
-    model: str = DEFAULT_NVIDIA_MODEL,
+    provider: str = "novita",
+    model: str = DEFAULT_MODEL,
     api_key: str | None = None,
     base_url: str | None = None,
-    temperature: float = 0.0,
+    temperature: float = DEFAULT_TEMPERATURE,
 ) -> BaseChatModel:
-    """Build a real LangChain chat model.
+    """Return the single, app-wide Novita chat model.
 
-    ``provider`` and ``api_key`` come from an agent's ``config.py``.
-    ``base_url`` targets any OpenAI-compatible endpoint (defaults to the
-    NVIDIA endpoint for the ``"nvidia"`` provider).
+    The whole application shares ONE provider. ``provider``/``base_url`` and the
+    per-call ``model``/``temperature`` arguments are accepted for backwards
+    compatibility but ignored: every caller gets the same model, built once and
+    cached for the process.
     """
-    if provider == "mock":
+    global _shared_model
+    if _shared_model is not None:
+        return _shared_model
+
+    key = api_key or os.environ.get("GEMMA_API_KEY")
+    if not key:
         raise LLMConfigError(
-            "The mock LLM has been removed — set GEMMA_API_KEY and use a real "
-            "provider (nvidia/openai/anthropic)."
-        )
-    if not api_key:
-        raise LLMConfigError(
-            "GEMMA_API_KEY is not set. All agents require a real key for "
-            f"{DEFAULT_NVIDIA_MODEL} via {NVIDIA_BASE_URL}; there is no mock fallback."
+            "GEMMA_API_KEY is not set. The whole app uses one Novita provider; "
+            "there is no mock fallback."
         )
 
-    if provider == "nvidia":  # OpenAI-compatible NVIDIA endpoint (gemma et al.)
-        from langchain_openai import ChatOpenAI
+    _shared_model = ChatOpenAI(
+        model=DEFAULT_MODEL,
+        api_key=key,
+        base_url=NOVITA_BASE_URL,
+        temperature=DEFAULT_TEMPERATURE,
+        timeout=_request_timeout(),
+        max_retries=1,
+    )
+    return _shared_model
 
-        return ChatOpenAI(
-            model=model,
-            api_key=api_key,
-            temperature=temperature,
-            base_url=base_url or NVIDIA_BASE_URL,
-            timeout=_request_timeout(),
-            max_retries=1,
-        )
 
-    if provider == "openai":  # pragma: no cover - requires extra + key
-        from langchain_openai import ChatOpenAI
-
-        return ChatOpenAI(
-            model=model,
-            api_key=api_key,
-            temperature=temperature,
-            base_url=base_url,
-            timeout=_request_timeout(),
-            max_retries=1,
-        )
-
-    if provider == "anthropic":  # pragma: no cover - requires extra + key
-        from langchain_anthropic import ChatAnthropic
-
-        return ChatAnthropic(model=model, api_key=api_key, temperature=temperature)
-
-    raise LLMConfigError(f"Unknown LLM provider: {provider!r}")
+def get_llm() -> BaseChatModel:
+    """Convenience accessor for the shared provider."""
+    return build_chat_model()

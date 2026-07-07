@@ -1,5 +1,5 @@
 """Providers behind image_analyzer tools. All three tools run through the real
-multimodal gemma model (``google/gemma-4-31b-it`` via the NVIDIA endpoint): the
+multimodal gemma model (``google/gemma-4-31b-it`` via Novita): the
 image is sent as a base64 data-URL content part and the answer is parsed into
 the domain schemas. No mock fallback: a missing ``GEMMA_API_KEY`` raises
 ``LLMConfigError`` on first use."""

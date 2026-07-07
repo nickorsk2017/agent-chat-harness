@@ -2,10 +2,16 @@
 # Requires Docker with the Compose v2 plugin (`docker compose`).
 
 COMPOSE ?= docker compose
+PYTHON ?= python3
+# Local venv for the (docker-free) Gemma health-check. The agents get LangChain from the
+# mcp image; on the host we bootstrap just what the probe needs into this venv.
+GEMMA_VENV ?= .venv-gemma
+GEMMA_PY = $(GEMMA_VENV)/bin/python
+GEMMA_DEPS = langchain langchain-openai pydantic-settings
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up up-fg down build rebuild logs ps restart clean
+.PHONY: help up up-fg down build rebuild logs ps restart clean gemma-check
 
 help: ## Show this help
 	@echo "agent-chat — available targets:"
@@ -38,3 +44,9 @@ restart: ## Restart all services
 
 clean: ## Stop the stack and remove volumes and locally-built images
 	$(COMPOSE) down -v --rmi local
+
+gemma-check: ## Check whether the Gemma hosting is reachable (no docker; use ARGS="--json")
+	@test -x $(GEMMA_PY) || $(PYTHON) -m venv $(GEMMA_VENV)
+	@$(GEMMA_PY) -c 'import langchain_openai, openai, pydantic_settings; from langchain.schema import HumanMessage' 2>/dev/null \
+		|| $(GEMMA_PY) -m pip install -q --disable-pip-version-check $(GEMMA_DEPS)
+	@$(GEMMA_PY) mcp/scripts/gemma_healthcheck.py $(ARGS)

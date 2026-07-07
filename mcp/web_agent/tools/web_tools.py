@@ -8,15 +8,25 @@ from agent_core.envelope import AgentResponse
 from web_agent.schemas.http import (
     FetchRequest,
     NewsRequest,
+    SearchRequest,
     WeatherRequest,
 )
-from web_agent.schemas.web import NewsResult, Weather, WebPage
+from web_agent.schemas.web import NewsResult, SearchResult, Weather, WebPage
 from web_agent.tools import providers
 
 AGENT = "web_agent"
 
 
 def register(mcp: FastMCP) -> None:
+    @mcp.tool
+    async def search_web(request: SearchRequest) -> AgentResponse[SearchResult]:
+        """Live internet search (Tavily): news, current events, fresh facts."""
+        try:
+            result = await providers.search_web(request.query, request.max_results)
+            return AgentResponse.ok(AGENT, result)
+        except Exception as exc:  # noqa: BLE001
+            return AgentResponse.fail(AGENT, str(exc))
+
     @mcp.tool
     async def get_news(request: NewsRequest) -> AgentResponse[NewsResult]:
         """Fetch recent news items about a topic."""

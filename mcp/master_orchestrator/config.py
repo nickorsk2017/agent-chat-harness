@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from agent_core.llm import DEFAULT_NVIDIA_MODEL, NVIDIA_BASE_URL
+from agent_core.llm import DEFAULT_MODEL, NOVITA_BASE_URL
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -57,12 +57,12 @@ class OrchestratorSettings(BaseSettings):
         default_factory=lambda: ["mcp", "mcp:8100"]
     )
 
-    # LLM used for task splitting + final synthesis — gemma via the NVIDIA
+    # LLM used for task splitting + final synthesis — gemma via Novita's
     # OpenAI-compatible endpoint. GEMMA_API_KEY (env) is REQUIRED; there is
     # no mock LLM fallback.
-    llm_provider: str = "nvidia"
-    llm_model: str = DEFAULT_NVIDIA_MODEL
-    llm_base_url: str = NVIDIA_BASE_URL
+    llm_provider: str = "novita"
+    llm_model: str = DEFAULT_MODEL
+    llm_base_url: str = NOVITA_BASE_URL
     llm_api_key: str | None = Field(default=None, validation_alias="GEMMA_API_KEY")
 
     # Hard cap so one slow sub-agent can't hang the whole request (rule 6).

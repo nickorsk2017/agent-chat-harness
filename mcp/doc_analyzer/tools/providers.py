@@ -1,7 +1,7 @@
 """Providers behind doc_analyzer tools. Pure text -> LLM: the gateway extracts
 PDF text in-memory and the orchestrator injects it into requests, so there is
 no file IO here. Summarization and Q&A run through the real gemma LLM
-(``google/gemma-4-31b-it`` via the NVIDIA endpoint). No mocks: a missing
+(``google/gemma-4-31b-it`` via Novita). No mocks: a missing
 ``GEMMA_API_KEY`` raises ``LLMConfigError`` on first LLM use."""
 
 from __future__ import annotations

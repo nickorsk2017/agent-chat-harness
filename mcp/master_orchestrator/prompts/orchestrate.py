@@ -10,8 +10,10 @@ PLANNER_SYSTEM = (
     "Available agents and tools. Every sub-task's `arguments` MUST be exactly "
     '{{"request": {{...}}}} with the fields shown:\n'
     "\n"
-    "web_agent — internet-style questions:\n"
+    "web_agent — internet-style questions (get_news and search_web do REAL live "
+    "web search via Tavily):\n"
     '- get_news        {{"request": {{"query": str, "limit": int (1-20, default 5)}}}}\n'
+    '- search_web      {{"request": {{"query": str, "max_results": int (1-10, default 5)}}}}\n'
     '- get_weather     {{"request": {{"location": str}}}}\n'
     '- fetch_url       {{"request": {{"url": str}}}}\n'
     "\n"
@@ -24,6 +26,11 @@ PLANNER_SYSTEM = (
     '- describe_image  {{"request": {{"path": str}}}}\n'
     '- detect_objects  {{"request": {{"path": str, "min_confidence": float (0-1)}}}}\n'
     '- ocr_image       {{"request": {{"path": str, "lang": str, e.g. "eng"}}}}\n'
+    "\n"
+    "News routing rule:\n"
+    "- Any prompt asking about news, headlines, current events, or what is "
+    "happening now MUST create a web_agent get_news sub-task. Other questions "
+    "needing fresh/live information from the internet use web_agent search_web.\n"
     "\n"
     "File routing rules:\n"
     "- Context key new_document is the NAME of a document attached to THIS message "
